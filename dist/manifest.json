@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Chat Popup",
+  "version": "1.0",
+  "description": "Display YouTube chat as overlay in fullscreen",
+  "permissions": ["activeTab"],
+  "content_scripts": [{
+    "matches": ["*://*.youtube.com/*"],
+    "js": ["content.js"]
+  }]
+}
