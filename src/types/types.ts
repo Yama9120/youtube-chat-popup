@@ -3,10 +3,10 @@ export interface ChatMessage {
     author: string;
     message: string;
     timestamp: number;
-  }
-  
-  export interface OverlayOptions {
+}
+
+export interface OverlayOptions {
     position: 'right' | 'left';
     duration: number;
     maxMessages: number;
-  }
+}
