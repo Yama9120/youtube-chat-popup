@@ -7,47 +7,11 @@ export class ChatObserver {
   constructor(onNewMessage: (message: ChatMessage) => void) {
     this.callback = onNewMessage;
     this.observer = new MutationObserver(this.handleMutations.bind(this));
-    console.log('ChatObserver initialized'); // デバッグログ追加
+    console.log('ChatObserver initialized');
   }
 
   public start(): void {
-    // まずiframeを探す
-    const chatFrame = document.querySelector('iframe#chatframe');
-    if (chatFrame instanceof HTMLIFrameElement) {
-      const frameDocument = chatFrame.contentDocument || chatFrame.contentWindow?.document;
-      if (frameDocument) {
-        const chatContainer = frameDocument.querySelector('#chat, #chat-messages, yt-live-chat-app');
-        console.log('Found chat container in iframe:', chatContainer);
-        if (chatContainer) {
-          this.observer.observe(chatContainer, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            characterData: true
-          });
-          console.log('Started observing chat container in iframe');
-          return;
-        }
-      }
-    }
-
-    // iframeがない場合やアクセスできない場合は通常のDOM内を探す
-    const chatContainer = document.querySelector('#chat, #chat-messages, yt-live-chat-app');
-    console.log('Found chat container:', chatContainer);
-
-    if (!chatContainer) {
-      console.log('Chat container not found, retrying...');
-      setTimeout(() => this.start(), 1000);
-      return;
-    }
-
-    this.observer.observe(chatContainer, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      characterData: true
-    });
-    console.log('Started observing chat container');
+    this.findAndObserveChatContainer();
   }
 
   public stop(): void {
@@ -55,16 +19,16 @@ export class ChatObserver {
   }
 
   private handleMutations(mutations: MutationRecord[]): void {
-    console.log('Mutations detected:', mutations); // デバッグログ
+    console.log('Mutations detected:', mutations);
     
     for (const mutation of mutations) {
       if (mutation.type === 'childList') {
         mutation.addedNodes.forEach(node => {
           if (node instanceof HTMLElement && this.isChatMessage(node)) {
-            console.log('Found chat message:', node); // デバッグログ
+            console.log('Found chat message:', node);
             const message = this.extractMessageData(node);
             if (message) {
-              console.log('Extracted message data:', message); // デバッグログ
+              console.log('Extracted message data:', message);
               this.callback(message);
             }
           }
@@ -76,7 +40,7 @@ export class ChatObserver {
   private isChatMessage(element: HTMLElement): boolean {
     const selectors = [
       'yt-live-chat-text-message-renderer',
-      'yt-live-chat-paid-message-renderer', // スーパーチャットも含める
+      'yt-live-chat-paid-message-renderer',
       '[id^="message"]',
       '.chat-message',
       '.yt-live-chat-item-list-renderer'
@@ -86,16 +50,9 @@ export class ChatObserver {
       element.matches(selector) || element.querySelector(selector) !== null
     );
     
-    console.log('Checking element:', {
-      element,
-      tagName: element.tagName,
-      isMessage,
-      selectors: selectors.map(s => ({ 
-        selector: s, 
-        matches: element.matches(s),
-        hasChild: element.querySelector(s) !== null 
-      }))
-    });
+    if (isMessage) {
+      console.log('Found message element:', element);
+    }
     
     return isMessage;
   }
@@ -116,6 +73,46 @@ export class ChatObserver {
     } catch (error) {
       console.error('Error extracting message data:', error);
       return null;
+    }
+  }
+
+  private findAndObserveChatContainer(): void {
+    const chatFrame = document.querySelector('iframe#chatframe');
+    if (chatFrame instanceof HTMLIFrameElement) {
+      this.observeFrameLoad(chatFrame);
+    } else {
+      this.findChatContainerInDocument(document);
+    }
+  }
+
+  private observeFrameLoad(frame: HTMLIFrameElement): void {
+    const checkFrame = () => {
+      const frameDocument = frame.contentDocument || frame.contentWindow?.document;
+      if (frameDocument) {
+        this.findChatContainerInDocument(frameDocument);
+      } else {
+        setTimeout(checkFrame, 500);
+      }
+    };
+    
+    checkFrame();
+  }
+
+  private findChatContainerInDocument(doc: Document): void {
+    const chatContainer = doc.querySelector('#chat, #chat-messages, yt-live-chat-app');
+    
+    if (chatContainer) {
+      console.log('Found chat container:', chatContainer);
+      this.observer.observe(chatContainer, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true
+      });
+      console.log('Started observing chat container');
+    } else {
+      console.log('Chat container not found, retrying...');
+      setTimeout(() => this.findChatContainerInDocument(doc), 1000);
     }
   }
 }

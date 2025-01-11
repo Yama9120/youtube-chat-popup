@@ -58,4 +58,25 @@ export class OverlayManager {
     element.innerHTML = `<strong>${message.author}:</strong> ${message.message}`;
     return element;
   }
+
+  public reset(): void {
+    // オーバーレイをクリアして再初期化
+    this.container.innerHTML = '';
+    this.messages = [];
+  }
+
+  // フルスクリーン時の位置調整
+  private updatePosition(): void {
+    const isFullscreen = document.fullscreenElement !== null;
+    this.container.style.position = 'fixed';
+    this.container.style.zIndex = '9999';
+    
+    if (isFullscreen) {
+      this.container.style.top = '20px';
+      this.container.style.right = '20px';
+    } else {
+      this.container.style.top = '60px';
+      this.container.style.right = '10px';
+    }
+  }
 }
