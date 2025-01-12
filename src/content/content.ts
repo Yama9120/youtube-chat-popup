@@ -4,23 +4,49 @@ import { OverlayManager } from './OverlayManager';
 class YouTubeChatController {
   private observer: ChatObserver | null = null;
   private overlay: OverlayManager;
+  private initializeTimeout: number | null = null;
 
   constructor() {
     this.overlay = new OverlayManager();
+    
+    // ページ読み込み完了後に初期化
+    if (document.readyState === 'complete') {
+      this.initialize();
+    } else {
+      window.addEventListener('load', () => this.initialize());
+    }
+  }
+
+  private initialize(): void {
+    // 初期化
     this.initializeObserver();
 
-    // 画面モード変更の検知
-    document.addEventListener('fullscreenchange', () => this.reinitialize());
-    document.addEventListener('webkitfullscreenchange', () => this.reinitialize());
-    
-    // シアターモードなどの変更検知
+    // イベントリスナーの設定
+    document.addEventListener('fullscreenchange', () => this.handleViewModeChange());
+    document.addEventListener('webkitfullscreenchange', () => this.handleViewModeChange());
+
+    // プレイヤーコンテナの監視
+    this.observePlayerContainer();
+  }
+
+  private handleViewModeChange(): void {
+    if (this.initializeTimeout) {
+      clearTimeout(this.initializeTimeout);
+    }
+
+    // 画面モード変更後、少し待ってから再初期化
+    this.initializeTimeout = window.setTimeout(() => {
+      this.reinitialize();
+    }, 1500);
+  }
+
+  private observePlayerContainer(): void {
     const videoContainer = document.querySelector('#player-container');
     if (videoContainer) {
-      const containerObserver = new MutationObserver(() => this.reinitialize());
+      const containerObserver = new MutationObserver(() => this.handleViewModeChange());
       containerObserver.observe(videoContainer, {
         attributes: true,
-        childList: true,
-        subtree: true
+        attributeFilter: ['class', 'style']
       });
     }
   }
@@ -30,10 +56,7 @@ class YouTubeChatController {
     if (this.observer) {
       this.observer.stop();
     }
-    
-    setTimeout(() => {
-      this.initializeObserver();
-    }, 1000);
+    this.initializeObserver();
   }
 
   private initializeObserver(): void {

@@ -3,6 +3,7 @@ import { ChatMessage } from '../types/types';
 export class ChatObserver {
   private observer: MutationObserver;
   private callback: (message: ChatMessage) => void;
+  private processedMessageIds: Set<string> = new Set(); // メッセージIDを追跡
   
   constructor(onNewMessage: (message: ChatMessage) => void) {
     this.callback = onNewMessage;
@@ -11,6 +12,8 @@ export class ChatObserver {
   }
 
   public start(): void {
+    this.stop();
+    this.processedMessageIds.clear();
     this.findAndObserveChatContainer();
   }
 
@@ -19,61 +22,38 @@ export class ChatObserver {
   }
 
   private handleMutations(mutations: MutationRecord[]): void {
-    console.log('Mutations detected:', mutations);
-    
-    for (const mutation of mutations) {
-      if (mutation.type === 'childList') {
+    // チャットメッセージのみを処理
+    mutations
+      .filter(mutation => mutation.type === 'childList')
+      .forEach(mutation => {
         mutation.addedNodes.forEach(node => {
-          if (node instanceof HTMLElement && this.isChatMessage(node)) {
-            console.log('Found chat message:', node);
-            const message = this.extractMessageData(node);
-            if (message) {
-              console.log('Extracted message data:', message);
-              this.callback(message);
-            }
+          if (node instanceof HTMLElement && 
+              node.tagName.toLowerCase() === 'yt-live-chat-text-message-renderer') {
+            this.processMessage(node);
           }
         });
+      });
+  }
+
+  private processMessage(element: HTMLElement): void {
+    // メッセージ要素から一意のIDを生成
+    const messageId = this.generateMessageId(element);
+    
+    if (!this.processedMessageIds.has(messageId)) {
+      const message = this.extractMessageData(element);
+      if (message) {
+        this.processedMessageIds.add(messageId);
+        this.callback(message);
       }
     }
   }
 
-  private isChatMessage(element: HTMLElement): boolean {
-    const selectors = [
-      'yt-live-chat-text-message-renderer',
-      'yt-live-chat-paid-message-renderer',
-      '[id^="message"]',
-      '.chat-message',
-      '.yt-live-chat-item-list-renderer'
-    ];
-    
-    const isMessage = selectors.some(selector => 
-      element.matches(selector) || element.querySelector(selector) !== null
-    );
-    
-    if (isMessage) {
-      console.log('Found message element:', element);
-    }
-    
-    return isMessage;
-  }
-
-  private extractMessageData(element: HTMLElement): ChatMessage | null {
-    try {
-      const authorElement = element.querySelector('#author-name');
-      const messageElement = element.querySelector('#message');
-
-      if (!authorElement || !messageElement) return null;
-
-      return {
-        id: crypto.randomUUID(),
-        author: authorElement.textContent?.trim() || '',
-        message: messageElement.textContent?.trim() || '',
-        timestamp: Date.now()
-      };
-    } catch (error) {
-      console.error('Error extracting message data:', error);
-      return null;
-    }
+  // メッセージの一意性を保証するためのID生成
+  private generateMessageId(element: HTMLElement): string {
+    const author = element.querySelector('#author-name')?.textContent?.trim() || '';
+    const message = element.querySelector('#message')?.textContent?.trim() || '';
+    const timestamp = element.querySelector('#timestamp')?.textContent?.trim() || '';
+    return `${author}-${message}-${timestamp}`;
   }
 
   private findAndObserveChatContainer(): void {
@@ -99,20 +79,39 @@ export class ChatObserver {
   }
 
   private findChatContainerInDocument(doc: Document): void {
-    const chatContainer = doc.querySelector('#chat, #chat-messages, yt-live-chat-app');
+    const chatContainer = doc.querySelector('yt-live-chat-app');
     
     if (chatContainer) {
       console.log('Found chat container:', chatContainer);
       this.observer.observe(chatContainer, {
         childList: true,
         subtree: true,
-        attributes: true,
-        characterData: true
       });
       console.log('Started observing chat container');
     } else {
-      console.log('Chat container not found, retrying...');
       setTimeout(() => this.findChatContainerInDocument(doc), 1000);
+    }
+  }
+
+  private extractMessageData(element: HTMLElement): ChatMessage | null {
+    try {
+      const authorElement = element.querySelector('#author-name');
+      const messageElement = element.querySelector('#message');
+      const timestampElement = element.querySelector('#timestamp');
+
+      if (!authorElement || !messageElement || !timestampElement) return null;
+
+      const id = this.generateMessageId(element);
+      
+      return {
+        id,
+        author: authorElement.textContent?.trim() || '',
+        message: messageElement.textContent?.trim() || '',
+        timestamp: Date.now()
+      };
+    } catch (error) {
+      console.error('Error extracting message data:', error);
+      return null;
     }
   }
 }
