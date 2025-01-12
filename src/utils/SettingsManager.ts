@@ -4,7 +4,8 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   fontSize: 14,
   messageWidth: 300,
   opacity: 0.8,
-  showUsername: true
+  showUsername: true,
+  design: 'topRight'
 };
 
 export class SettingsManager {

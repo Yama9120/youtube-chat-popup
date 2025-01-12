@@ -8,7 +8,8 @@ export class OverlayManager {
     fontSize: 14,
     messageWidth: 300,
     opacity: 0.8,
-    showUsername: true
+    showUsername: true,
+    design: 'topRight'
   };
 
   constructor(options: Partial<OverlayOptions> = {}) {
@@ -71,6 +72,13 @@ export class OverlayManager {
     panel.innerHTML = `
       <h3 style="margin: 0 0 16px 0">チャット設定</h3>
       <div style="margin-bottom: 12px">
+        <label>デザイン</label><br>
+        <select data-setting="design">
+          <option value="topRight" ${this.settings.design === 'topRight' ? 'selected' : ''}>右上</option>
+          <option value="bottomRight" ${this.settings.design === 'bottomRight' ? 'selected' : ''}>右下</option>
+        </select>
+      </div>
+      <div style="margin-bottom: 12px">
         <label>ユーザー名を表示</label>
         <input type="checkbox" data-setting="showUsername" ${this.settings.showUsername ? 'checked' : ''}>
       </div>
@@ -128,6 +136,17 @@ export class OverlayManager {
       this.settings.showUsername = target.checked;
       this.applySettingsToAllMessages();
       await chrome.storage.local.set({ 'youtube-chat-settings': this.settings });
+    });
+
+    // デザイン選択のイベントリスナーを追加
+    const designSelect = panel.querySelector('select[data-setting="design"]') as HTMLSelectElement;
+    designSelect.addEventListener('change', () => {
+      this.settings = {
+        ...this.settings,
+        design: designSelect.value as ChatSettings['design']
+      };
+      this.applySettingsToAllMessages();
+      chrome.storage.local.set({ 'youtube-chat-settings': this.settings });
     });
 
     return panel;
@@ -250,9 +269,23 @@ export class OverlayManager {
       this.container.style.right = '10px';
     }
   }
+
+  private updateDesign(): void {
+    // コンテナの配置を更新
+    if (this.settings.design === 'topRight') {
+      this.container.style.top = '20px';
+      this.container.style.bottom = 'auto';
+      this.container.style.right = '20px';
+    } else if (this.settings.design === 'bottomRight') {
+      this.container.style.top = 'auto';
+      this.container.style.bottom = '20px';
+      this.container.style.right = '20px';
+    }
+  }
   
   public updateSettings(settings: ChatSettings): void {
     this.settings = settings;
+    this.updateDesign();
     this.applySettingsToAllMessages();
   }
 }

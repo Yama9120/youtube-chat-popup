@@ -16,6 +16,7 @@ export interface ChatSettings {
     messageWidth: number;
     opacity: number;
     showUsername: boolean;
+    design: 'topRight' | 'topLeft' | 'bottomRight' | 'bottomLeft';
 }
   
   // デフォルト設定も追加
@@ -23,5 +24,6 @@ export const DEFAULT_SETTINGS: ChatSettings = {
     fontSize: 14,
     messageWidth: 300,
     opacity: 0.8,
-    showUsername: true
+    showUsername: true,
+    design: 'topRight'
 };
