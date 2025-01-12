@@ -140,13 +140,18 @@ export class OverlayManager {
 
     // デザイン選択のイベントリスナーを追加
     const designSelect = panel.querySelector('select[data-setting="design"]') as HTMLSelectElement;
-    designSelect.addEventListener('change', () => {
+    designSelect.addEventListener('change', async () => {
+      const newDesign = designSelect.value as ChatSettings['design'];
       this.settings = {
         ...this.settings,
-        design: designSelect.value as ChatSettings['design']
+        design: newDesign
       };
-      this.applySettingsToAllMessages();
-      chrome.storage.local.set({ 'youtube-chat-settings': this.settings });
+      
+      // すぐにデザインを適用
+      this.updateDesign();
+      
+      // 設定を保存
+      await chrome.storage.local.set({ 'youtube-chat-settings': this.settings });
     });
 
     return panel;
