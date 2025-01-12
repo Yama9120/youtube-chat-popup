@@ -10,3 +10,18 @@ export interface OverlayOptions {
     duration: number;
     maxMessages: number;
 }
+
+export interface ChatSettings {
+    fontSize: number;
+    messageWidth: number;
+    messageHeight: number;
+    opacity: number;
+  }
+  
+  // デフォルト設定も追加
+  export const DEFAULT_SETTINGS: ChatSettings = {
+    fontSize: 14,
+    messageWidth: 300,
+    messageHeight: 80,
+    opacity: 0.8
+  };

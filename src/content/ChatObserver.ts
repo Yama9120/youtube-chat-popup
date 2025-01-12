@@ -82,12 +82,12 @@ export class ChatObserver {
     const chatContainer = doc.querySelector('yt-live-chat-app');
     
     if (chatContainer) {
-      console.log('Found chat container:', chatContainer);
+      // console.log('Found chat container:', chatContainer);
       this.observer.observe(chatContainer, {
         childList: true,
         subtree: true,
       });
-      console.log('Started observing chat container');
+      // console.log('Started observing chat container');
     } else {
       setTimeout(() => this.findChatContainerInDocument(doc), 1000);
     }

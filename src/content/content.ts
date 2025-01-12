@@ -1,13 +1,25 @@
 import { ChatObserver } from './ChatObserver';
 import { OverlayManager } from './OverlayManager';
+import { SettingsUI } from './SettingsUI';
+import { SettingsManager } from '../utils/SettingsManager';
 
 class YouTubeChatController {
   private observer: ChatObserver | null = null;
   private overlay: OverlayManager;
   private initializeTimeout: number | null = null;
+  private settings?: SettingsUI;
 
   constructor() {
     this.overlay = new OverlayManager();
+
+    // 設定の初期化
+    SettingsManager.loadSettings().then(settings => {
+      this.settings = new SettingsUI(settings, (newSettings) => {
+        this.overlay.updateSettings(newSettings);
+        SettingsManager.saveSettings(newSettings);
+      });
+      this.overlay.updateSettings(settings);
+    });
     
     // ページ読み込み完了後に初期化
     if (document.readyState === 'complete') {
@@ -52,7 +64,7 @@ class YouTubeChatController {
   }
 
   private reinitialize(): void {
-    console.log('Reinitializing chat observer...');
+    // console.log('Reinitializing chat observer...');
     if (this.observer) {
       this.observer.stop();
     }
