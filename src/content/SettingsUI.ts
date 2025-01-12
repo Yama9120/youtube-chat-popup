@@ -63,11 +63,6 @@ export class SettingsUI {
         <span>${this.settings.messageWidth}px</span>
       </div>
       <div style="margin-bottom: 12px">
-        <label>メッセージ高さ (px)</label><br>
-        <input type="range" min="40" max="200" value="${this.settings.messageHeight}" data-setting="messageHeight">
-        <span>${this.settings.messageHeight}px</span>
-      </div>
-      <div style="margin-bottom: 12px">
         <label>透明度</label><br>
         <input type="range" min="1" max="100" value="${this.settings.opacity * 100}" data-setting="opacity">
         <span>${this.settings.opacity}</span>

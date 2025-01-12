@@ -130,47 +130,89 @@ export class OverlayManager {
   private applySettingsToAllMessages(): void {
     this.container.querySelectorAll('[data-message-id]').forEach(messageEl => {
       if (messageEl instanceof HTMLElement) {
-        this.applyMessageStyles(messageEl);
+        const authorEl = messageEl.querySelector('.chat-author') as HTMLElement;
+        const messageTextEl = messageEl.querySelector('.chat-message') as HTMLElement;
+        
+        if (authorEl && messageTextEl) {
+          this.applyMessageStyles(messageEl, authorEl, messageTextEl);
+        }
       }
     });
   }
 
-  private applyMessageStyles(element: HTMLElement): void {
-    element.style.cssText = `
+  public addMessage(message: ChatMessage): void {
+      const messageElement = this.createMessageElement(message);
+      this.container.appendChild(messageElement);
+      
+      this.messages.push(message);
+      if (this.messages.length > this.options.maxMessages) {
+        const oldMessage = this.messages.shift();
+        const oldElement = this.container.querySelector(`[data-message-id="${oldMessage?.id}"]`);
+        oldElement?.remove();
+      }
+
+      setTimeout(() => {
+        messageElement.remove();
+        this.messages = this.messages.filter(m => m.id !== message.id);
+      }, this.options.duration);
+  }
+
+  private createMessageElement(message: ChatMessage): HTMLElement {
+    const messageContainer = document.createElement('div');
+    messageContainer.dataset.messageId = message.id;
+    messageContainer.className = 'chat-message-container';
+    
+    const authorSpan = document.createElement('span');
+    authorSpan.className = 'chat-author';
+    authorSpan.textContent = `${message.author}:`;
+    
+    const messageSpan = document.createElement('span');
+    messageSpan.className = 'chat-message';
+    messageSpan.textContent = message.message;
+    
+    messageContainer.appendChild(authorSpan);
+    messageContainer.appendChild(messageSpan);
+    
+    this.applyMessageStyles(messageContainer, authorSpan, messageSpan);
+    return messageContainer;
+  }
+  
+  private applyMessageStyles(
+    container: HTMLElement, 
+    author: HTMLElement, 
+    message: HTMLElement
+  ): void {
+    // コンテナのスタイル
+    container.style.cssText = `
       background: rgba(0, 0, 0, ${this.settings.opacity});
       color: white;
       padding: 8px 12px;
       border-radius: 4px;
       margin-bottom: 8px;
       width: ${this.settings.messageWidth}px;
-      max-height: ${this.settings.messageHeight}px;
-      overflow-y: auto;
-      font-size: ${this.settings.fontSize}px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
       animation: slideIn 0.3s ease-out;
     `;
+  
+    // 著者名のスタイル
+    author.style.cssText = `
+      font-weight: bold;
+      font-size: ${this.settings.fontSize}px;
+      margin-bottom: 4px;
+      line-height: 1.2;
+    `;
+  
+    // メッセージ本文のスタイル
+    message.style.cssText = `
+      font-size: ${this.settings.fontSize}px;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    `;
   }
-
-  public addMessage(message: ChatMessage): void {
-    const messageElement = document.createElement('div');
-    messageElement.dataset.messageId = message.id;
-    messageElement.innerHTML = `<strong>${message.author}:</strong> ${message.message}`;
-    
-    this.applyMessageStyles(messageElement);
-    this.container.appendChild(messageElement);
-    
-    this.messages.push(message);
-    if (this.messages.length > this.options.maxMessages) {
-      const oldMessage = this.messages.shift();
-      const oldElement = this.container.querySelector(`[data-message-id="${oldMessage?.id}"]`);
-      oldElement?.remove();
-    }
-
-    setTimeout(() => {
-      messageElement.remove();
-      this.messages = this.messages.filter(m => m.id !== message.id);
-    }, this.options.duration);
-  }
-
+  
   public reset(): void {
     this.container.innerHTML = '';
     this.messages = [];
