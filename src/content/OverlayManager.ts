@@ -73,10 +73,32 @@ export class OverlayManager {
       <h3 style="margin: 0 0 16px 0">チャット設定</h3>
       <div style="margin-bottom: 12px">
         <label>デザイン</label><br>
-        <select data-setting="design">
-          <option value="topRight" ${this.settings.design === 'topRight' ? 'selected' : ''}>右上</option>
-          <option value="bottomRight" ${this.settings.design === 'bottomRight' ? 'selected' : ''}>右下</option>
-        </select>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
+          <button 
+            class="design-btn ${this.settings.design === 'topLeft' ? 'active' : ''}" 
+            data-design="topLeft"
+            style="padding: 8px; text-align: center;">
+            左上
+          </button>
+          <button 
+            class="design-btn ${this.settings.design === 'topRight' ? 'active' : ''}" 
+            data-design="topRight"
+            style="padding: 8px; text-align: center;">
+            右上
+          </button>
+          <button 
+            class="design-btn ${this.settings.design === 'bottomLeft' ? 'active' : ''}" 
+            data-design="bottomLeft"
+            style="padding: 8px; text-align: center;">
+            左下
+          </button>
+          <button 
+            class="design-btn ${this.settings.design === 'bottomRight' ? 'active' : ''}" 
+            data-design="bottomRight"
+            style="padding: 8px; text-align: center;">
+            右下
+          </button>
+        </div>
       </div>
       <div style="margin-bottom: 12px">
         <label>ユーザー名を表示</label>
@@ -98,6 +120,27 @@ export class OverlayManager {
         <span>${this.settings.opacity}</span>
       </div>
     `;
+
+    panel.querySelectorAll('.design-btn').forEach(button => {
+      (button as HTMLElement).style.cssText = `
+        background: rgba(50, 50, 50, 0.8);
+        border: 2px solid transparent;
+        border-radius: 4px;
+        color: white;
+        cursor: pointer;
+        padding: 8px;
+        transition: all 0.2s;
+      `;
+    });
+
+    panel.querySelector('.design-btn.active')?.setAttribute('style', `
+      background: rgba(50, 50, 50, 0.8);
+      border: 2px solid #fff;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      padding: 8px;
+    `);
 
     panel.querySelectorAll('input[type="range"]').forEach(input => {
       input.addEventListener('input', async (e) => {
@@ -138,20 +181,26 @@ export class OverlayManager {
       await chrome.storage.local.set({ 'youtube-chat-settings': this.settings });
     });
 
-    // デザイン選択のイベントリスナーを追加
-    const designSelect = panel.querySelector('select[data-setting="design"]') as HTMLSelectElement;
-    designSelect.addEventListener('change', async () => {
-      const newDesign = designSelect.value as ChatSettings['design'];
-      this.settings = {
-        ...this.settings,
-        design: newDesign
-      };
-      
-      // すぐにデザインを適用
-      this.updateDesign();
-      
-      // 設定を保存
-      await chrome.storage.local.set({ 'youtube-chat-settings': this.settings });
+    // デザイン選択のイベントリスナー
+    panel.querySelectorAll('.design-btn').forEach(button => {
+      button.addEventListener('click', async (e) => {
+        const target = e.target as HTMLButtonElement;
+        const newDesign = target.dataset.design as ChatSettings['design'];
+        
+        // アクティブ状態を更新
+        panel.querySelectorAll('.design-btn').forEach(btn => {
+          (btn as HTMLElement).style.border = '2px solid transparent';
+        });
+        target.style.border = '2px solid #fff';
+        
+        this.settings = {
+          ...this.settings,
+          design: newDesign
+        };
+        
+        this.updateDesign();
+        await chrome.storage.local.set({ 'youtube-chat-settings': this.settings });
+      });
     });
 
     return panel;
@@ -276,15 +325,32 @@ export class OverlayManager {
   }
 
   private updateDesign(): void {
-    // コンテナの配置を更新
-    if (this.settings.design === 'topRight') {
-      this.container.style.top = '20px';
-      this.container.style.bottom = 'auto';
-      this.container.style.right = '20px';
-    } else if (this.settings.design === 'bottomRight') {
-      this.container.style.top = 'auto';
-      this.container.style.bottom = '20px';
-      this.container.style.right = '20px';
+    console.log('Updating design to:', this.settings.design);
+    
+    // 全ての位置をリセット
+    this.container.style.top = 'auto';
+    this.container.style.bottom = 'auto';
+    this.container.style.left = 'auto';
+    this.container.style.right = 'auto';
+  
+    // 新しい位置を設定
+    switch (this.settings.design) {
+      case 'topRight':
+        this.container.style.top = '20px';
+        this.container.style.right = '20px';
+        break;
+      case 'topLeft':
+        this.container.style.top = '20px';
+        this.container.style.left = '20px';
+        break;
+      case 'bottomRight':
+        this.container.style.bottom = '20px';
+        this.container.style.right = '20px';
+        break;
+      case 'bottomLeft':
+        this.container.style.bottom = '20px';
+        this.container.style.left = '20px';
+        break;
     }
   }
   
