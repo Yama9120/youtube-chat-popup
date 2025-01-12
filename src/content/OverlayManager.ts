@@ -11,46 +11,56 @@ export class OverlayManager {
     messageWidth: 300,
     opacity: 0.8,
     showUsername: true,
-    design: 'topRight'
+    design: 'topRight',
+    maxMessages: 10
   };
 
   constructor(options: Partial<OverlayOptions> = {}) {
+    this.settings = {
+      fontSize: 14,
+      messageWidth: 300,
+      opacity: 0.8,
+      showUsername: true,
+      design: 'topRight',
+      maxMessages: 10  // デフォルト値
+    };
+  
     // デザインごとの設定
-    const designConfigs: Record<ChatDesign, MessageConfig> = {
+    const designConfigs: Record<ChatDesign, Omit<MessageConfig, 'maxMessages'>> = {
       bottomBubble: {
         maxLength: 10,
         duration: 100000,
-        maxMessages: 500
       },
       topRight: {
         maxLength: 200,
         duration: 5000,
-        maxMessages: 8
       },
       topLeft: {
         maxLength: 200,
         duration: 5000,
-        maxMessages: 8
       },
       bottomRight: {
         maxLength: 200,
         duration: 5000,
-        maxMessages: 8
       },
       bottomLeft: {
         maxLength: 200,
         duration: 5000,
-        maxMessages: 8
       }
     };
-
+  
     this.position = options.position || 'right';
-    this.messageConfig = designConfigs[this.settings.design];
-
+    
+    // MessageConfigを作成（maxMessagesは設定から取得）
+    this.messageConfig = {
+      ...designConfigs[this.settings.design],
+      maxMessages: this.settings.maxMessages
+    };
+  
     this.container = this.createContainer();
     this.settingsButton = this.createSettingsButton();
   }
-  
+
   public updateSettings(settings: ChatSettings): void {
     this.settings = settings;
     
@@ -59,31 +69,39 @@ export class OverlayManager {
       bottomBubble: {
         maxLength: 30,
         duration: 5000,
-        maxMessages: 30
+        maxMessages: this.settings.maxMessages
       },
       topRight: {
         maxLength: 200,
         duration: 5000,
-        maxMessages: 8
+        maxMessages: this.settings.maxMessages
       },
       topLeft: {
         maxLength: 200,
         duration: 5000,
-        maxMessages: 8
+        maxMessages: this.settings.maxMessages
       },
       bottomRight: {
         maxLength: 200,
         duration: 5000,
-        maxMessages: 8
+        maxMessages: this.settings.maxMessages
       },
       bottomLeft: {
         maxLength: 200,
         duration: 5000,
-        maxMessages: 8
+        maxMessages: this.settings.maxMessages
       }
     };
     
     this.messageConfig = designConfigs[this.settings.design];
+
+    // 既存のメッセージを制限に合わせて調整
+    while (this.messages.length > this.messageConfig.maxMessages) {
+      const oldMessage = this.messages.shift();
+      const oldElement = this.container.querySelector(`[data-message-id="${oldMessage?.id}"]`);
+      oldElement?.remove();
+    }
+
     this.updateDesign();
     this.applySettingsToAllMessages();
   }
@@ -241,6 +259,11 @@ export class OverlayManager {
         <input type="checkbox" data-setting="showUsername" ${this.settings.showUsername ? 'checked' : ''}>
       </div>
       <div style="margin-bottom: 12px">
+        <label>同時表示数</label><br>
+        <input type="range" min="5" max="50" value="${this.settings.maxMessages}" data-setting="maxMessages">
+        <span>${this.settings.maxMessages}件</span>
+      </div>
+      <div style="margin-bottom: 12px">
         <label>文字サイズ (px)</label><br>
         <input type="range" min="10" max="24" value="${this.settings.fontSize}" data-setting="fontSize">
         <span>${this.settings.fontSize}px</span>
@@ -290,7 +313,7 @@ export class OverlayManager {
             ...this.settings,
             [setting]: value / 100
           };
-        } else if (setting === 'fontSize' || setting === 'messageWidth') {
+        } else if (setting === 'fontSize' || setting === 'messageWidth' || setting === 'maxMessages') {
           this.settings = {
             ...this.settings,
             [setting]: value
@@ -299,16 +322,22 @@ export class OverlayManager {
         
         // 表示値を更新
         const span = target.nextElementSibling as HTMLElement;
-        span.textContent = setting === 'opacity' ? String(this.settings[setting]) : `${value}px`;
+        if (setting === 'opacity') {
+          span.textContent = String(this.settings[setting]);
+        } else if (setting === 'maxMessages') {
+          span.textContent = `${value}件`;
+        } else {
+          span.textContent = `${value}px`;
+        }
         
-        // 既存のメッセージに新しい設定を適用
-        this.applySettingsToAllMessages();
-    
+        // 設定を即時反映
+        this.updateSettings(this.settings);
+        
         // 設定を保存
         await chrome.storage.local.set({ 'youtube-chat-settings': this.settings });
       });
-    })
-
+    });
+    
     const checkbox = panel.querySelector('input[type="checkbox"]') as HTMLInputElement;
     checkbox.addEventListener('change', async (e) => {
       const target = e.target as HTMLInputElement;
@@ -537,6 +566,4 @@ export class OverlayManager {
       document.head.appendChild(styleSheet);
     }
   }
-
-
 }

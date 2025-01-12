@@ -25,6 +25,7 @@ export interface ChatSettings {
     opacity: number;
     showUsername: boolean;
     design: ChatDesign;
+    maxMessages: number;
 }
 
 export const DEFAULT_SETTINGS: ChatSettings = {
@@ -32,5 +33,6 @@ export const DEFAULT_SETTINGS: ChatSettings = {
     messageWidth: 300,
     opacity: 0.8,
     showUsername: true,
-    design: 'topRight'
+    design: 'topRight',
+    maxMessages: 10
 };

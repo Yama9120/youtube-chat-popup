@@ -5,7 +5,8 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   messageWidth: 300,
   opacity: 0.8,
   showUsername: true,
-  design: 'topRight'
+  design: 'topRight',
+  maxMessages: 10
 };
 
 export class SettingsManager {
