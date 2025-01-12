@@ -16,7 +16,7 @@ export interface ChatSettings {
     messageWidth: number;
     opacity: number;
     showUsername: boolean;
-    design: 'topRight' | 'topLeft' | 'bottomRight' | 'bottomLeft';
+    design: 'topRight' | 'topLeft' | 'bottomRight' | 'bottomLeft' | 'bottomBubble';
 }
   
   // デフォルト設定も追加

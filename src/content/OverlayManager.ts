@@ -99,6 +99,14 @@ export class OverlayManager {
             右下
           </button>
         </div>
+        <div style="margin-top: 8px;">
+          <button 
+            class="design-btn ${this.settings.design === 'bottomBubble' ? 'active' : ''}" 
+            data-design="bottomBubble"
+            style="padding: 8px; text-align: center; width: 100%;">
+            吹き出し
+          </button>
+        </div>
       </div>
       <div style="margin-bottom: 12px">
         <label>ユーザー名を表示</label>
@@ -332,6 +340,8 @@ export class OverlayManager {
     this.container.style.bottom = 'auto';
     this.container.style.left = 'auto';
     this.container.style.right = 'auto';
+    this.container.style.width = 'auto';
+    this.container.style.transform = 'none';
   
     // 新しい位置を設定
     switch (this.settings.design) {
@@ -350,6 +360,11 @@ export class OverlayManager {
       case 'bottomLeft':
         this.container.style.bottom = '20px';
         this.container.style.left = '20px';
+        break;
+      case 'bottomBubble':
+        this.container.style.bottom = '20px';
+        this.container.style.left = '50%';
+        this.container.style.transform = 'translateX(-50%)';
         break;
     }
   }
