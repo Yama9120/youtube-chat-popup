@@ -88,7 +88,7 @@ export class OverlayManager {
     `;
 
     panel.querySelectorAll('input[type="range"]').forEach(input => {
-      input.addEventListener('input', (e) => {
+      input.addEventListener('input', async (e) => {
         const target = e.target as HTMLInputElement;
         const setting = target.dataset.setting as keyof ChatSettings;
         const value = Number(target.value);
@@ -105,6 +105,9 @@ export class OverlayManager {
         
         // 既存のメッセージに新しい設定を適用
         this.applySettingsToAllMessages();
+    
+        // 設定を保存
+        await chrome.storage.local.set({ 'youtube-chat-settings': this.settings });
       });
     });
 

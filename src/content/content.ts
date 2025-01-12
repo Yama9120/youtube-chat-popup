@@ -11,21 +11,23 @@ class YouTubeChatController {
 
   constructor() {
     this.overlay = new OverlayManager();
-
-    // 設定の初期化
-    SettingsManager.loadSettings().then(settings => {
-      this.settings = new SettingsUI(settings, (newSettings) => {
-        this.overlay.updateSettings(newSettings);
-        SettingsManager.saveSettings(newSettings);
-      });
-      this.overlay.updateSettings(settings);
-    });
     
-    // ページ読み込み完了後に初期化
+    // 設定の読み込みと適用
+    this.initializeSettings();
+    
     if (document.readyState === 'complete') {
       this.initialize();
     } else {
       window.addEventListener('load', () => this.initialize());
+    }
+  }
+
+  private async initializeSettings(): Promise<void> {
+    try {
+      const settings = await SettingsManager.loadSettings();
+      this.overlay.updateSettings(settings);
+    } catch (error) {
+      console.error('Failed to initialize settings:', error);
     }
   }
 
