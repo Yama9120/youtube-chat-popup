@@ -1,6 +1,8 @@
 import { ChatMessage, OverlayOptions, ChatSettings } from '../types/types';
 
 export class OverlayManager {
+  private settingsButton: HTMLElement;
+  
   private container: HTMLElement;
   private messages: ChatMessage[] = [];
   private options: OverlayOptions;
@@ -16,10 +18,10 @@ export class OverlayManager {
     this.options = {
       position: options.position || 'right',
       duration: options.duration || 5000,
-      maxMessages: options.maxMessages || 5
+      maxMessages: this.settings.design === 'bottomBubble' ? 15 : 8 // pupupの場合はコメント数8、それ以外は5
     };
     this.container = this.createContainer();
-    this.createSettingsButton();
+    this.settingsButton = this.createSettingsButton();
   }
 
   private createContainer(): HTMLElement {
@@ -35,7 +37,7 @@ export class OverlayManager {
     return container;
   }
 
-  private createSettingsButton(): void {
+  private createSettingsButton(): HTMLElement {
     const button = document.createElement('button');
     button.textContent = '⚙️';
     button.style.cssText = `
@@ -52,7 +54,8 @@ export class OverlayManager {
       pointer-events: auto;
     `;
     button.addEventListener('click', () => this.toggleSettings());
-    this.container.appendChild(button);
+    document.body.appendChild(button);  // containerではなく、document.bodyに直接追加
+    return button;
   }
 
   private createSettingsPanel(): HTMLElement {
@@ -276,40 +279,78 @@ export class OverlayManager {
   }
   
   private applyMessageStyles(
-    container: HTMLElement, 
-    author: HTMLElement, 
+    container: HTMLElement,
+    author: HTMLElement,
     message: HTMLElement
   ): void {
-    // コンテナのスタイル
-    container.style.cssText = `
-      background: rgba(0, 0, 0, ${this.settings.opacity});
-      color: white;
-      padding: 8px 12px;
-      border-radius: 4px;
-      margin-bottom: 8px;
-      width: ${this.settings.messageWidth}px;
-      display: flex;
-      flex-direction: column;
-      box-sizing: border-box;
-      animation: slideIn 0.3s ease-out;
-    `;
+    if (this.settings.design === 'bottomBubble') {
+      // ランダムな水平位置を生成（-40%から40%の範囲）
+      const randomX = Math.random() * 80 - 40;
+      // ランダムな垂直位置を生成（画面下部から100px〜300pxの範囲）
+      const randomY = Math.random() * 200 + 100;
   
-    // 著者名のスタイル
-    author.style.cssText = `
-      font-weight: bold;
-      font-size: ${this.settings.fontSize}px;
-      margin-bottom: 4px;
-      line-height: 1.2;
-      display: ${this.settings.showUsername ? 'block' : 'none'};
-    `;
+      container.style.cssText = `
+        background: rgba(0, 0, 0, ${this.settings.opacity});
+        color: white;
+        padding: 12px 20px;
+        border-radius: 20px;
+        width: ${this.settings.messageWidth}px;
+        position: absolute;
+        left: ${50 + randomX}%;
+        bottom: ${randomY}px;
+        transform: translateX(-50%);
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+        animation: fadeInOut 5s ease-in-out;
+      `;
   
-    // メッセージ本文のスタイル
-    message.style.cssText = `
-      font-size: ${this.settings.fontSize}px;
-      word-wrap: break-word;
-      white-space: pre-wrap;
-      line-height: 1.4;
-    `;
+      author.style.cssText = `
+        font-weight: bold;
+        font-size: ${this.settings.fontSize}px;
+        margin-bottom: 4px;
+        line-height: 1.2;
+        display: ${this.settings.showUsername ? 'block' : 'none'};
+        text-align: center;
+      `;
+  
+      message.style.cssText = `
+        font-size: ${this.settings.fontSize}px;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+        line-height: 1.4;
+        text-align: center;
+      `;
+    } else {
+      // 通常のデザイン用のスタイル（既存のスタイル）
+      container.style.cssText = `
+        background: rgba(0, 0, 0, ${this.settings.opacity});
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        width: ${this.settings.messageWidth}px;
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+        animation: slideIn 0.3s ease-out;
+      `;
+  
+      author.style.cssText = `
+        font-weight: bold;
+        font-size: ${this.settings.fontSize}px;
+        margin-bottom: 4px;
+        line-height: 1.2;
+        display: ${this.settings.showUsername ? 'block' : 'none'};
+      `;
+  
+      message.style.cssText = `
+        font-size: ${this.settings.fontSize}px;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+        line-height: 1.4;
+      `;
+    }
   }
   
   public reset(): void {
@@ -319,56 +360,82 @@ export class OverlayManager {
   }
 
   public updatePosition(): void {
-    const isFullscreen = document.fullscreenElement !== null;
-    this.container.style.position = 'fixed';
-    this.container.style.zIndex = '9999';
-    
-    if (isFullscreen) {
-      this.container.style.top = '20px';
-      this.container.style.right = '20px';
-    } else {
-      this.container.style.top = '60px';
-      this.container.style.right = '10px';
+    if (this.settings.design !== 'bottomBubble') {
+      const isFullscreen = document.fullscreenElement !== null;
+      if (isFullscreen) {
+        this.container.style.top = '20px';
+        this.container.style.right = '20px';
+      } else {
+        this.container.style.top = '60px';
+        this.container.style.right = '10px';
+      }
     }
   }
 
   private updateDesign(): void {
-    console.log('Updating design to:', this.settings.design);
+    // アニメーションスタイルの追加
+    this.ensureAnimationStyles();
     
-    // 全ての位置をリセット
-    this.container.style.top = 'auto';
-    this.container.style.bottom = 'auto';
-    this.container.style.left = 'auto';
-    this.container.style.right = 'auto';
-    this.container.style.width = 'auto';
-    this.container.style.transform = 'none';
+    // コンテナのスタイルをリセット
+    this.container.style.cssText = '';
   
-    // 新しい位置を設定
-    switch (this.settings.design) {
-      case 'topRight':
-        this.container.style.top = '20px';
-        this.container.style.right = '20px';
-        break;
-      case 'topLeft':
-        this.container.style.top = '20px';
-        this.container.style.left = '20px';
-        break;
-      case 'bottomRight':
-        this.container.style.bottom = '20px';
-        this.container.style.right = '20px';
-        break;
-      case 'bottomLeft':
-        this.container.style.bottom = '20px';
-        this.container.style.left = '20px';
-        break;
-      case 'bottomBubble':
-        this.container.style.bottom = '20px';
-        this.container.style.left = '50%';
-        this.container.style.transform = 'translateX(-50%)';
-        break;
+    // 基本のコンテナスタイル
+    const baseStyles = `
+      position: fixed;
+      z-index: 9999;
+      pointer-events: none;
+    `;
+  
+    if (this.settings.design === 'bottomBubble') {
+      this.container.style.cssText = `
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 400px;
+        pointer-events: none;
+        z-index: 9999;
+      `;
+    } else {
+      // 他のデザインの位置設定
+      this.container.style.cssText = baseStyles;
+      switch (this.settings.design) {
+        case 'topRight':
+          this.container.style.top = '20px';
+          this.container.style.right = '20px';
+          break;
+        case 'topLeft':
+          this.container.style.top = '20px';
+          this.container.style.left = '20px';
+          break;
+        case 'bottomRight':
+          this.container.style.bottom = '20px';
+          this.container.style.right = '20px';
+          break;
+        case 'bottomLeft':
+          this.container.style.bottom = '20px';
+          this.container.style.left = '20px';
+          break;
+      }
     }
   }
-  
+
+  private ensureAnimationStyles(): void {
+    if (!document.querySelector('#chat-animations')) {
+      const styleSheet = document.createElement('style');
+      styleSheet.id = 'chat-animations';
+      styleSheet.textContent = `
+        @keyframes fadeInOut {
+          0% { opacity: 0; transform: translateX(-50%) scale(0.9); }
+          10% { opacity: 1; transform: translateX(-50%) scale(1); }
+          90% { opacity: 1; transform: translateX(-50%) scale(1); }
+          100% { opacity: 0; transform: translateX(-50%) scale(0.9); }
+        }
+      `;
+      document.head.appendChild(styleSheet);
+    }
+  }
+
   public updateSettings(settings: ChatSettings): void {
     this.settings = settings;
     this.updateDesign();
