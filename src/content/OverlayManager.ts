@@ -7,7 +7,7 @@ export class OverlayManager {
   private settings: ChatSettings = {
     fontSize: 14,
     messageWidth: 300,
-    messageHeight: 80,
+
     opacity: 0.8
   };
 
@@ -79,11 +79,6 @@ export class OverlayManager {
         <label>メッセージ幅 (px)</label><br>
         <input type="range" min="200" max="500" value="${this.settings.messageWidth}" data-setting="messageWidth">
         <span>${this.settings.messageWidth}px</span>
-      </div>
-      <div style="margin-bottom: 12px">
-        <label>メッセージ高さ (px)</label><br>
-        <input type="range" min="40" max="200" value="${this.settings.messageHeight}" data-setting="messageHeight">
-        <span>${this.settings.messageHeight}px</span>
       </div>
       <div style="margin-bottom: 12px">
         <label>透明度</label><br>

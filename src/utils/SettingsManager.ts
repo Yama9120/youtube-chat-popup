@@ -3,7 +3,6 @@ import { ChatSettings } from '../types/types';
 export const DEFAULT_SETTINGS: ChatSettings = {
   fontSize: 14,
   messageWidth: 300,
-  messageHeight: 80,
   opacity: 0.8
 };
 
