@@ -14,14 +14,14 @@ export interface OverlayOptions {
 export interface ChatSettings {
     fontSize: number;
     messageWidth: number;
-
     opacity: number;
-  }
+    showUsername: boolean;
+}
   
   // デフォルト設定も追加
-  export const DEFAULT_SETTINGS: ChatSettings = {
+export const DEFAULT_SETTINGS: ChatSettings = {
     fontSize: 14,
     messageWidth: 300,
-
-    opacity: 0.8
-  };
+    opacity: 0.8,
+    showUsername: true
+};

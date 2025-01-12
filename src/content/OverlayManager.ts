@@ -7,8 +7,8 @@ export class OverlayManager {
   private settings: ChatSettings = {
     fontSize: 14,
     messageWidth: 300,
-
-    opacity: 0.8
+    opacity: 0.8,
+    showUsername: true
   };
 
   constructor(options: Partial<OverlayOptions> = {}) {
@@ -71,6 +71,10 @@ export class OverlayManager {
     panel.innerHTML = `
       <h3 style="margin: 0 0 16px 0">チャット設定</h3>
       <div style="margin-bottom: 12px">
+        <label>ユーザー名を表示</label>
+        <input type="checkbox" data-setting="showUsername" ${this.settings.showUsername ? 'checked' : ''}>
+      </div>
+      <div style="margin-bottom: 12px">
         <label>文字サイズ (px)</label><br>
         <input type="range" min="10" max="24" value="${this.settings.fontSize}" data-setting="fontSize">
         <span>${this.settings.fontSize}px</span>
@@ -93,10 +97,17 @@ export class OverlayManager {
         const setting = target.dataset.setting as keyof ChatSettings;
         const value = Number(target.value);
         
+        // 型安全な設定の更新
         if (setting === 'opacity') {
-          this.settings[setting] = value / 100;
-        } else {
-          this.settings[setting] = value;
+          this.settings = {
+            ...this.settings,
+            [setting]: value / 100
+          };
+        } else if (setting === 'fontSize' || setting === 'messageWidth') {
+          this.settings = {
+            ...this.settings,
+            [setting]: value
+          };
         }
         
         // 表示値を更新
@@ -109,6 +120,14 @@ export class OverlayManager {
         // 設定を保存
         await chrome.storage.local.set({ 'youtube-chat-settings': this.settings });
       });
+    })
+
+    const checkbox = panel.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    checkbox.addEventListener('change', async (e) => {
+      const target = e.target as HTMLInputElement;
+      this.settings.showUsername = target.checked;
+      this.applySettingsToAllMessages();
+      await chrome.storage.local.set({ 'youtube-chat-settings': this.settings });
     });
 
     return panel;
@@ -200,6 +219,7 @@ export class OverlayManager {
       font-size: ${this.settings.fontSize}px;
       margin-bottom: 4px;
       line-height: 1.2;
+      display: ${this.settings.showUsername ? 'block' : 'none'};
     `;
   
     // メッセージ本文のスタイル

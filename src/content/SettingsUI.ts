@@ -81,9 +81,11 @@ export class SettingsUI {
         
         const newSettings = { ...this.settings };
         if (setting === 'opacity') {
-          newSettings[setting] = value / 100;
-        } else {
-          newSettings[setting] = value;
+          newSettings.opacity = value / 100;
+        } else if (setting === 'fontSize') {
+          newSettings.fontSize = value;
+        } else if (setting === 'messageWidth') {
+          newSettings.messageWidth = value;
         }
         
         this.settings = newSettings;
