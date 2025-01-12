@@ -284,11 +284,25 @@ export class OverlayManager {
     message: HTMLElement
   ): void {
     if (this.settings.design === 'bottomBubble') {
-      // ランダムな水平位置を生成（-40%から40%の範囲）
-      const randomX = Math.random() * 80 - 40;
-      // ランダムな垂直位置を生成（画面下部から100px〜300pxの範囲）
-      const randomY = Math.random() * 200 + 100;
-  
+      // ランダム値を生成（0-100）
+      const random = Math.random() * 100;
+      let randomX;
+      let randomY;
+      
+      if (random < 40) {
+          // 40%の確率で左側（-45%から-20%）
+          randomX = Math.random() * 30 - 45;
+          randomY = Math.random() * 170 + 50;
+      } else if (random < 80) {
+          // 40%の確率で右側（20%から45%）
+          randomX = Math.random() * 30 + 15;
+          randomY = Math.random() * 170 + 50;
+      } else {
+          // 20%の確率で中央（-20%から20%）
+          randomX = Math.random() * 40 - 20;
+          randomY = Math.random() * 100 + 50;
+      }
+      
       container.style.cssText = `
         background: rgba(0, 0, 0, ${this.settings.opacity});
         color: white;
