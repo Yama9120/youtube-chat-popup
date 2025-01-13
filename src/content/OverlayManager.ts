@@ -12,7 +12,7 @@ export class OverlayManager {
     opacity: 0.8,
     showUsername: true,
     design: 'topRight',
-    maxMessages: 5000
+    maxMessages: 200
   };
 
   constructor(options: Partial<OverlayOptions> = {}) {
@@ -22,14 +22,14 @@ export class OverlayManager {
       opacity: 0.8,
       showUsername: true,
       design: 'topRight',
-      maxMessages: 5000  // デフォルト値 スタンプがhtmlそのままのため1000↑もじになってしまうからやむなく5000に変更
+      maxMessages: 200  // デフォルト値
     };
   
     // デザインごとの設定
     const designConfigs: Record<ChatDesign, Omit<MessageConfig, 'maxMessages'>> = {
       bottomBubble: {
-        maxLength: 5000,
-        duration: 100000,
+        maxLength: 30,
+        duration: 5000,
       },
       topRight: {
         maxLength: 200,
@@ -67,7 +67,7 @@ export class OverlayManager {
     // デザイン変更時にメッセージ設定も更新
     const designConfigs: Record<ChatDesign, MessageConfig> = {
       bottomBubble: {
-        maxLength: 5000,
+        maxLength: 30,
         duration: 5000,
         maxMessages: this.settings.maxMessages
       },
@@ -119,11 +119,24 @@ export class OverlayManager {
     return container;
   }
 
-  private shouldDisplayMessage(message: string): boolean {
-    const length = [...message].length;
-    const maxLength = this.messageConfig.maxLength;
-    console.log(`Message length check: ${length} / ${maxLength}`);
-    return length <= maxLength;
+  private shouldDisplayMessage(message: string, isSpecialContent: boolean = false): boolean {
+    // HTMLタグを除いた実際のテキスト長さを計算
+    const textLength = this.stripHtmlTags(message).length;
+    
+    // デザインに応じた文字数制限
+    const maxLength = this.settings.design === 'bottomBubble'
+      ? (isSpecialContent ? 5000 : 30)  // bottomBubbleは通常30文字、スタンプは5000文字
+      : (isSpecialContent ? 5000 : (this.messageConfig.maxLength || 200));
+  
+    console.log(`Message length check: ${textLength} / ${maxLength}`);
+    return textLength <= maxLength;
+  }
+
+  private stripHtmlTags(html: string): string {
+    // HTMLタグを除去し、実際のテキスト長さを計算
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || '';
   }
 
   private cleanupOldMessages(): void {
@@ -139,10 +152,19 @@ export class OverlayManager {
   }
 
   public addMessage(message: ChatMessage): void {
-    if (!this.shouldDisplayMessage(message.message)) {
+    // スタンプかどうかを判断する関数
+    const isStampOrSpecialContent = (messageContent: string) => {
+      // スタンプや特殊な画像要素が含まれているかチェック
+      return /<img[^>]+class="(emoji|small-emoji)"/.test(messageContent);
+    };
+  
+    const isSpecialContent = isStampOrSpecialContent(message.message);
+  
+    if (!this.shouldDisplayMessage(message.message, isSpecialContent)) {
       return;
     }
-
+  
+    // 残りの実装は同じ
     const messageElement = this.createMessageElement(message);
     this.container.appendChild(messageElement);
     
@@ -152,7 +174,7 @@ export class OverlayManager {
       const oldElement = this.container.querySelector(`[data-message-id="${oldMessage?.id}"]`);
       oldElement?.remove();
     }
-
+  
     setTimeout(() => {
       messageElement.remove();
       this.messages = this.messages.filter(m => m.id !== message.id);
@@ -418,6 +440,7 @@ export class OverlayManager {
     author: HTMLElement,
     message: HTMLElement
   ): void {
+
     if (this.settings.design === 'bottomBubble') {
       // ランダム値を生成（0-100）
       const random = Math.random() * 100;
@@ -471,17 +494,6 @@ export class OverlayManager {
         text-align: center;
       `;
 
-      // 吹き出しデザインの絵文字スタイル
-      const emojiImages = message.querySelectorAll('img');
-      emojiImages.forEach(img => {
-        img.style.cssText = `
-          height: ${this.settings.fontSize * 1.5}px;
-          width: auto;
-          vertical-align: middle;
-          margin: 0 2px;
-        `;
-      });
-
     } else {
       // 通常のデザイン用のスタイル（既存のスタイル）
       container.style.cssText = `
@@ -511,32 +523,33 @@ export class OverlayManager {
         white-space: pre-wrap;
         line-height: 1.4;
       `;
-
-      // 通常デザインの絵文字スタイル
-      const emojiImages = message.querySelectorAll('img');
-      emojiImages.forEach(img => {
-        img.style.cssText = `
-          height: ${this.settings.fontSize * 1.5}px;
-          width: auto;
-          vertical-align: middle;
-          margin: 0 2px;
-        `;
-      });
     }
 
-    // カスタム絵文字のコンテナスタイル（共通）
-    const emojiContainers = message.querySelectorAll('.emoji, yt-emoji');
-    emojiContainers.forEach(container => {
+    // 絵文字のスタイル設定
+    const size = this.settings.fontSize * 1.8;
+    message.querySelectorAll('img').forEach(img => {
+      if (img instanceof HTMLImageElement) {
+        Object.assign(img.style, {
+          height: `${size}px`,
+          width: 'auto',
+          maxHeight: `${size}px`,
+          verticalAlign: 'middle',
+          margin: '0 2px'
+        });
+      }
+    });
+
+    // 絵文字コンテナのスタイル
+    message.querySelectorAll('.emoji, yt-emoji').forEach(container => {
       if (container instanceof HTMLElement) {
-        container.style.cssText = `
-          display: inline-flex;
-          align-items: center;
-          vertical-align: middle;
-        `;
+        Object.assign(container.style, {
+          display: 'inline-flex',
+          verticalAlign: 'middle'
+        });
       }
     });
   }
-  
+
   public reset(): void {
     this.container.innerHTML = '';
     this.messages = [];
