@@ -442,31 +442,57 @@ export class OverlayManager {
   ): void {
 
     if (this.settings.design === 'bottomBubble') {
-      // ランダム値を生成（0-100）
       const random = Math.random() * 100;
       let randomX;
       let randomY;
       
       if (random < 40) {
-          // 40%の確率で左側（-45%から-20%）
           randomX = Math.random() * 30 - 45;
           randomY = Math.random() * 170 + 50;
       } else if (random < 80) {
-          // 40%の確率で右側（20%から45%）
           randomX = Math.random() * 30 + 15;
           randomY = Math.random() * 170 + 50;
       } else {
-          // 20%の確率で中央（-20%から20%）
           randomX = Math.random() * 40 - 20;
           randomY = Math.random() * 100 + 50;
       }
+
+      // より正確な幅計算のバージョン
+      const tempSpan = document.createElement('span');
+      tempSpan.style.cssText = `
+        font-size: ${this.settings.fontSize}px;
+        visibility: hidden;
+        position: absolute;
+        white-space: pre-wrap;
+        padding: 12px 20px;
+      `;
+      tempSpan.innerHTML = message.innerHTML; // HTMLの構造をそのままコピー
+
+      // 絵文字のサイズを考慮
+      const emojiSize = this.settings.fontSize * 2.5;
+      tempSpan.querySelectorAll('img').forEach(img => {
+        if (img instanceof HTMLImageElement) {
+          Object.assign(img.style, {
+            height: `${emojiSize}px`,
+            width: `${emojiSize}px`
+          });
+        }
+      });
+
+      document.body.appendChild(tempSpan);
+      const contentWidth = tempSpan.offsetWidth;
+
+      const paddingWidth = 40; // 左右のパディング (20px * 2)
+      const calculatedWidth = Math.min(contentWidth + paddingWidth, this.settings.messageWidth);
+      
+      document.body.removeChild(tempSpan);
       
       container.style.cssText = `
         background: rgba(0, 0, 0, ${this.settings.opacity});
         color: white;
         padding: 12px 20px;
         border-radius: 20px;
-        width: ${this.settings.messageWidth}px;
+        width: ${calculatedWidth}px;
         position: absolute;
         left: ${50 + randomX}%;
         bottom: ${randomY}px;
