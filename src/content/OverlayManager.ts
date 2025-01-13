@@ -12,7 +12,7 @@ export class OverlayManager {
     opacity: 0.8,
     showUsername: true,
     design: 'topRight',
-    maxMessages: 10
+    maxMessages: 5000
   };
 
   constructor(options: Partial<OverlayOptions> = {}) {
@@ -22,13 +22,13 @@ export class OverlayManager {
       opacity: 0.8,
       showUsername: true,
       design: 'topRight',
-      maxMessages: 10  // デフォルト値
+      maxMessages: 5000  // デフォルト値 スタンプがhtmlそのままのため1000↑もじになってしまうからやむなく5000に変更
     };
   
     // デザインごとの設定
     const designConfigs: Record<ChatDesign, Omit<MessageConfig, 'maxMessages'>> = {
       bottomBubble: {
-        maxLength: 10,
+        maxLength: 5000,
         duration: 100000,
       },
       topRight: {
@@ -67,7 +67,7 @@ export class OverlayManager {
     // デザイン変更時にメッセージ設定も更新
     const designConfigs: Record<ChatDesign, MessageConfig> = {
       bottomBubble: {
-        maxLength: 30,
+        maxLength: 5000,
         duration: 5000,
         maxMessages: this.settings.maxMessages
       },
@@ -158,7 +158,7 @@ export class OverlayManager {
       this.messages = this.messages.filter(m => m.id !== message.id);
     }, this.messageConfig.duration);
   }
-  
+
   private createMessageElement(message: ChatMessage): HTMLElement {
     const messageContainer = document.createElement('div');
     messageContainer.dataset.messageId = message.id;
@@ -169,13 +169,31 @@ export class OverlayManager {
     authorEl.className = 'chat-author';
     messageEl.className = 'chat-message';
     
-    // 絵文字を含むテキストをそのまま表示できるように
     authorEl.textContent = message.author;
-    messageEl.textContent = message.message;
+    // HTMLをそのまま設定
+    messageEl.innerHTML = message.message;
     
+    // CORS設定と代替テキスト処理
+    messageEl.querySelectorAll('img').forEach(img => {
+      if (img instanceof HTMLImageElement) {
+        img.crossOrigin = 'anonymous';
+        img.referrerPolicy = 'no-referrer';
+        
+        img.onerror = () => {
+          const altText = img.getAttribute('alt');
+          if (altText) {
+            const span = document.createElement('span');
+            span.textContent = `:${altText}:`;
+            span.style.opacity = '0.7';
+            img.replaceWith(span);
+          }
+        };
+      }
+    });
+     
     messageContainer.appendChild(authorEl);
-    messageContainer.appendChild(messageEl);
-  
+    messageContainer.appendChild(messageEl); 
+     
     this.applyMessageStyles(messageContainer, authorEl, messageEl);
     return messageContainer;
   }
@@ -452,6 +470,18 @@ export class OverlayManager {
         line-height: 1.4;
         text-align: center;
       `;
+
+      // 吹き出しデザインの絵文字スタイル
+      const emojiImages = message.querySelectorAll('img');
+      emojiImages.forEach(img => {
+        img.style.cssText = `
+          height: ${this.settings.fontSize * 1.5}px;
+          width: auto;
+          vertical-align: middle;
+          margin: 0 2px;
+        `;
+      });
+
     } else {
       // 通常のデザイン用のスタイル（既存のスタイル）
       container.style.cssText = `
@@ -481,7 +511,30 @@ export class OverlayManager {
         white-space: pre-wrap;
         line-height: 1.4;
       `;
+
+      // 通常デザインの絵文字スタイル
+      const emojiImages = message.querySelectorAll('img');
+      emojiImages.forEach(img => {
+        img.style.cssText = `
+          height: ${this.settings.fontSize * 1.5}px;
+          width: auto;
+          vertical-align: middle;
+          margin: 0 2px;
+        `;
+      });
     }
+
+    // カスタム絵文字のコンテナスタイル（共通）
+    const emojiContainers = message.querySelectorAll('.emoji, yt-emoji');
+    emojiContainers.forEach(container => {
+      if (container instanceof HTMLElement) {
+        container.style.cssText = `
+          display: inline-flex;
+          align-items: center;
+          vertical-align: middle;
+        `;
+      }
+    });
   }
   
   public reset(): void {

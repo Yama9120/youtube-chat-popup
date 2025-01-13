@@ -98,15 +98,25 @@ export class ChatObserver {
       const authorElement = element.querySelector('#author-name');
       const messageElement = element.querySelector('#message');
       const timestampElement = element.querySelector('#timestamp');
-
+  
       if (!authorElement || !messageElement || !timestampElement) return null;
-
+  
+      // 全ての絵文字要素のCORS設定
+      messageElement.querySelectorAll('img.emoji').forEach(img => {
+        if (img instanceof HTMLImageElement) {
+          img.crossOrigin = 'anonymous';
+          img.referrerPolicy = 'no-referrer';
+        }
+      });
+  
       const id = this.generateMessageId(element);
-      
+      // HTML全体を保持（スタンプ、絵文字、フォーマットを含む）
+      const messageContent = messageElement.innerHTML;
+  
       return {
         id,
         author: authorElement.textContent?.trim() || '',
-        message: messageElement.textContent?.trim() || '',
+        message: messageContent,
         timestamp: Date.now()
       };
     } catch (error) {
