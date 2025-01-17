@@ -14,6 +14,7 @@ export class OverlayManager {
     design: 'topRight',
     maxMessages: 200
   };
+  private videoPlayer: HTMLElement | null = null;
 
   constructor(options: Partial<OverlayOptions> = {}) {
     this.settings = {
@@ -59,6 +60,10 @@ export class OverlayManager {
   
     this.container = this.createContainer();
     this.settingsButton = this.createSettingsButton();
+
+    this.updateVideoPlayer();
+    this.setupResizeObserver();
+    document.addEventListener('fullscreenchange', () => this.updatePosition());
   }
 
   public updateSettings(settings: ChatSettings): void {
@@ -109,13 +114,14 @@ export class OverlayManager {
   private createContainer(): HTMLElement {
     const container = document.createElement('div');
     container.style.cssText = `
-      position: fixed;
-      ${this.position}: 20px;
-      top: 20px;
-      z-index: 9999;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       pointer-events: none;
+      z-index: 9999;
     `;
-    document.body.appendChild(container);
     return container;
   }
 
@@ -164,9 +170,19 @@ export class OverlayManager {
       return;
     }
   
-    // 残りの実装は同じ
     const messageElement = this.createMessageElement(message);
-    this.container.appendChild(messageElement);
+    
+    // デザインに応じて追加方法を変更
+    if (this.settings.design === 'bottomBubble') {
+      this.container.appendChild(messageElement);
+    } else {
+      // 上から下、または下から上への流れを維持
+      if (['bottomRight', 'bottomLeft'].includes(this.settings.design)) {
+        this.container.insertBefore(messageElement, this.container.firstChild);
+      } else {
+        this.container.appendChild(messageElement);
+      }
+    }
     
     this.messages.push(message);
     if (this.messages.length > this.messageConfig.maxMessages) {
@@ -440,24 +456,27 @@ export class OverlayManager {
     author: HTMLElement,
     message: HTMLElement
   ): void {
+    const padding = '3%';
 
+    // プレイヤーの幅を安全に取得
+    const playerWidth = this.videoPlayer ? this.videoPlayer.clientWidth : window.innerWidth;
+  
     if (this.settings.design === 'bottomBubble') {
       const random = Math.random() * 100;
       let randomX;
       let randomY;
       
       if (random < 40) {
-          randomX = Math.random() * 30 - 45;
-          randomY = Math.random() * 170 + 50;
+        randomX = Math.random() * 30 - 45;
+        randomY = Math.random() * 30 + 10; // プレイヤー内に収まるよう調整
       } else if (random < 80) {
-          randomX = Math.random() * 30 + 15;
-          randomY = Math.random() * 170 + 50;
+        randomX = Math.random() * 30 + 15;
+        randomY = Math.random() * 30 + 10;
       } else {
-          randomX = Math.random() * 40 - 20;
-          randomY = Math.random() * 100 + 50;
+        randomX = Math.random() * 40 - 20;
+        randomY = Math.random() * 20 + 10;
       }
-
-      // より正確な幅計算のバージョン
+  
       const tempSpan = document.createElement('span');
       tempSpan.style.cssText = `
         font-size: ${this.settings.fontSize}px;
@@ -466,9 +485,8 @@ export class OverlayManager {
         white-space: pre-wrap;
         padding: 12px 20px;
       `;
-      tempSpan.innerHTML = message.innerHTML; // HTMLの構造をそのままコピー
-
-      // 絵文字のサイズを考慮
+      tempSpan.innerHTML = message.innerHTML;
+  
       const emojiSize = this.settings.fontSize * 2.5;
       tempSpan.querySelectorAll('img').forEach(img => {
         if (img instanceof HTMLImageElement) {
@@ -478,14 +496,13 @@ export class OverlayManager {
           });
         }
       });
-
+  
       document.body.appendChild(tempSpan);
       const contentWidth = tempSpan.offsetWidth;
-
-      const paddingWidth = 40; // 左右のパディング (20px * 2)
-      const calculatedWidth = Math.min(contentWidth + paddingWidth, this.settings.messageWidth);
-      
       document.body.removeChild(tempSpan);
+  
+      const paddingWidth = 40;
+      const calculatedWidth = Math.min(contentWidth + paddingWidth, this.settings.messageWidth);
       
       container.style.cssText = `
         background: rgba(0, 0, 0, ${this.settings.opacity});
@@ -495,62 +512,65 @@ export class OverlayManager {
         width: ${calculatedWidth}px;
         position: absolute;
         left: ${50 + randomX}%;
-        bottom: ${randomY}px;
+        bottom: ${randomY}%;
         transform: translateX(-50%);
         display: flex;
         flex-direction: column;
         box-sizing: border-box;
         animation: fadeInOut 5s ease-in-out;
       `;
-  
-      author.style.cssText = `
-        font-weight: bold;
-        font-size: ${this.settings.fontSize}px;
-        margin-bottom: 4px;
-        line-height: 1.2;
-        display: ${this.settings.showUsername ? 'block' : 'none'};
-        text-align: center;
-      `;
-  
-      message.style.cssText = `
-        font-size: ${this.settings.fontSize}px;
-        word-wrap: break-word;
-        white-space: pre-wrap;
-        line-height: 1.4;
-        text-align: center;
-      `;
-
     } else {
-      // 通常のデザイン用のスタイル（既存のスタイル）
+      // 他のデザインのスタイル
       container.style.cssText = `
+        position: relative; /* absoluteからrelativeに変更 */
         background: rgba(0, 0, 0, ${this.settings.opacity});
         color: white;
         padding: 8px 12px;
         border-radius: 4px;
         margin-bottom: 8px;
-        width: ${this.settings.messageWidth}px;
+        width: ${Math.min(this.settings.messageWidth, playerWidth * 0.3)}px;
         display: flex;
         flex-direction: column;
         box-sizing: border-box;
         animation: slideIn 0.3s ease-out;
       `;
   
-      author.style.cssText = `
-        font-weight: bold;
-        font-size: ${this.settings.fontSize}px;
-        margin-bottom: 4px;
-        line-height: 1.2;
-        display: ${this.settings.showUsername ? 'block' : 'none'};
-      `;
-  
-      message.style.cssText = `
-        font-size: ${this.settings.fontSize}px;
-        word-wrap: break-word;
-        white-space: pre-wrap;
-        line-height: 1.4;
-      `;
+      // デザインに応じて位置を設定
+      switch (this.settings.design) {
+        case 'topRight':
+          container.style.top = padding;
+          container.style.right = padding;
+          break;
+        case 'topLeft':
+          container.style.top = padding;
+          container.style.left = padding;
+          break;
+        case 'bottomRight':
+          container.style.bottom = padding;
+          container.style.right = padding;
+          break;
+        case 'bottomLeft':
+          container.style.bottom = padding;
+          container.style.left = padding;
+          break;
+      }
     }
-
+  
+    author.style.cssText = `
+      font-weight: bold;
+      font-size: ${this.settings.fontSize}px;
+      margin-bottom: 4px;
+      line-height: 1.2;
+      display: ${this.settings.showUsername ? 'block' : 'none'};
+    `;
+  
+    message.style.cssText = `
+      font-size: ${this.settings.fontSize}px;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    `;
+  
     // 絵文字のスタイル設定
     const size = this.settings.fontSize * 1.8;
     message.querySelectorAll('img').forEach(img => {
@@ -564,8 +584,7 @@ export class OverlayManager {
         });
       }
     });
-
-    // 絵文字コンテナのスタイル
+  
     message.querySelectorAll('.emoji, yt-emoji').forEach(container => {
       if (container instanceof HTMLElement) {
         Object.assign(container.style, {
@@ -575,69 +594,168 @@ export class OverlayManager {
       }
     });
   }
-
+  
   public reset(): void {
     this.container.innerHTML = '';
     this.messages = [];
     this.createSettingsButton();
   }
 
-  public updatePosition(): void {
-    if (this.settings.design !== 'bottomBubble') {
-      const isFullscreen = document.fullscreenElement !== null;
-      if (isFullscreen) {
-        this.container.style.top = '20px';
-        this.container.style.right = '20px';
-      } else {
-        this.container.style.top = '60px';
-        this.container.style.right = '10px';
+  // 動画プレーヤー要素を取得・更新する関数
+  private updateVideoPlayer(): void {
+    this.videoPlayer = document.querySelector('#movie_player') || 
+                      document.querySelector('.html5-video-player');
+    if (this.videoPlayer) {
+      this.updatePosition();
+    }
+  }
+
+  // リサイズ監視を設定
+  private setupResizeObserver(): void {
+    const resizeObserver = new ResizeObserver(() => {
+      this.updatePosition();
+    });
+    
+    // 定期的に動画プレーヤーの存在をチェック
+    const checkPlayer = setInterval(() => {
+      const player = document.querySelector('#movie_player') || 
+                    document.querySelector('.html5-video-player');
+      if (player) {
+        this.videoPlayer = player as HTMLElement;
+        resizeObserver.observe(this.videoPlayer);
+        clearInterval(checkPlayer);
       }
+    }, 1000);
+  }
+
+
+  public updatePosition(): void {
+    if (!this.videoPlayer) return;
+  
+    // コンテナがプレイヤー全体をカバーするように設定
+    this.container.style.cssText = `
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+      overflow: hidden;
+    `;
+  
+    if (this.settings.design === 'bottomBubble') {
+      // bottomBubbleデザインの場合は下部40%のエリアを使用
+      this.messages.forEach(message => {
+        const messageEl = this.container.querySelector(`[data-message-id="${message.id}"]`);
+        if (messageEl instanceof HTMLElement) {
+          messageEl.style.bottom = `${40}%`;
+        }
+      });
+    } else {
+      const padding = '3%';
+      // メッセージコンテナの位置設定
+      this.messages.forEach(message => {
+        const messageEl = this.container.querySelector(`[data-message-id="${message.id}"]`);
+        if (messageEl instanceof HTMLElement) {
+          messageEl.style.position = 'absolute';
+          messageEl.style.maxWidth = '30%';
+          
+          switch (this.settings.design) {
+            case 'topRight':
+              messageEl.style.top = padding;
+              messageEl.style.right = padding;
+              break;
+            case 'topLeft':
+              messageEl.style.top = padding;
+              messageEl.style.left = padding;
+              break;
+            case 'bottomRight':
+              messageEl.style.bottom = padding;
+              messageEl.style.right = padding;
+              break;
+            case 'bottomLeft':
+              messageEl.style.bottom = padding;
+              messageEl.style.left = padding;
+              break;
+          }
+        }
+      });
+    }
+  
+    // コンテナを動画プレーヤー内に配置
+    if (this.videoPlayer.style.position !== 'relative') {
+      this.videoPlayer.style.position = 'relative';
+    }
+    
+    if (!this.videoPlayer.contains(this.container)) {
+      this.videoPlayer.appendChild(this.container);
     }
   }
 
   private updateDesign(): void {
-    // アニメーションスタイルの追加
     this.ensureAnimationStyles();
-    
-    // コンテナのスタイルをリセット
-    this.container.style.cssText = '';
   
-    // 基本のコンテナスタイル
-    const baseStyles = `
-      position: fixed;
-      z-index: 9999;
-      pointer-events: none;
-    `;
+    if (!this.videoPlayer) {
+      this.updateVideoPlayer();
+    }
   
+    if (this.videoPlayer) {
+      if (this.videoPlayer.style.position !== 'relative') {
+        this.videoPlayer.style.position = 'relative';
+      }
+      if (!this.videoPlayer.contains(this.container)) {
+        this.videoPlayer.appendChild(this.container);
+      }
+    }
+  
+    // コンテナのスタイルを設定
     if (this.settings.design === 'bottomBubble') {
       this.container.style.cssText = `
-        position: fixed;
-        bottom: 0;
+        position: absolute;
+        top: 0;
         left: 0;
-        right: 0;
-        height: 400px;
+        width: 100%;
+        height: 100%;
         pointer-events: none;
         z-index: 9999;
+        overflow: hidden;
       `;
     } else {
-      // 他のデザインの位置設定
-      this.container.style.cssText = baseStyles;
+      // 通常のフローデザイン用のコンテナスタイル
+      const padding = '3%';
+      this.container.style.cssText = `
+        position: absolute;
+        pointer-events: none;
+        z-index: 9999;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      `;
+  
+      // デザインに応じてコンテナの位置とサイズを設定
       switch (this.settings.design) {
         case 'topRight':
-          this.container.style.top = '20px';
-          this.container.style.right = '20px';
+          this.container.style.top = padding;
+          this.container.style.right = padding;
+          this.container.style.alignItems = 'flex-end';
           break;
         case 'topLeft':
-          this.container.style.top = '20px';
-          this.container.style.left = '20px';
+          this.container.style.top = padding;
+          this.container.style.left = padding;
+          this.container.style.alignItems = 'flex-start';
           break;
         case 'bottomRight':
-          this.container.style.bottom = '20px';
-          this.container.style.right = '20px';
+          this.container.style.bottom = padding;
+          this.container.style.right = padding;
+          this.container.style.alignItems = 'flex-end';
+          this.container.style.flexDirection = 'column-reverse';
           break;
         case 'bottomLeft':
-          this.container.style.bottom = '20px';
-          this.container.style.left = '20px';
+          this.container.style.bottom = padding;
+          this.container.style.left = padding;
+          this.container.style.alignItems = 'flex-start';
+          this.container.style.flexDirection = 'column-reverse';
           break;
       }
     }
