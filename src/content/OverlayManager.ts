@@ -466,15 +466,26 @@ export class OverlayManager {
       let randomX;
       let randomY;
       
-      if (random < 40) {
-        randomX = Math.random() * 30 - 43;
-        randomY = Math.random() * 18 + 3; // 5〜25の範囲に変更
+      if (random < 20) {
+        // 左端エリア
+        randomX = Math.random() * 15 - 43;
+        randomY = Math.random() * 20 + 3; 
+      } else if (random < 40) {
+        // 左中エリア
+        randomX = Math.random() * 15 - 28;
+        randomY = Math.random() * 17 + 3; 
+      } else if (random < 60) {
+        // 中央エリア
+        randomX = Math.random() * 20 - 10;
+        randomY = Math.random() * 15 + 3; 
       } else if (random < 80) {
-        randomX = Math.random() * 30 + 13;
-        randomY = Math.random() * 18 + 3; // 5〜25の範囲に変更
+        // 右中エリア
+        randomX = Math.random() * 15 + 13;
+        randomY = Math.random() * 17 + 3; 
       } else {
-        randomX = Math.random() * 38 - 19;
-        randomY = Math.random() * 18 + 3; // 5〜20の範囲に変更
+        // 右端エリア
+        randomX = Math.random() * 15 + 28;
+        randomY = Math.random() * 20 + 3; 
       }
   
       const tempSpan = document.createElement('span');
