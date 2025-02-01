@@ -467,14 +467,14 @@ export class OverlayManager {
       let randomY;
       
       if (random < 40) {
-        randomX = Math.random() * 30 - 45;
-        randomY = Math.random() * 30 + 10; // プレイヤー内に収まるよう調整
+        randomX = Math.random() * 30 - 43;
+        randomY = Math.random() * 18 + 3; // 5〜25の範囲に変更
       } else if (random < 80) {
-        randomX = Math.random() * 30 + 15;
-        randomY = Math.random() * 30 + 10;
+        randomX = Math.random() * 30 + 13;
+        randomY = Math.random() * 18 + 3; // 5〜25の範囲に変更
       } else {
-        randomX = Math.random() * 40 - 20;
-        randomY = Math.random() * 20 + 10;
+        randomX = Math.random() * 38 - 19;
+        randomY = Math.random() * 18 + 3; // 5〜20の範囲に変更
       }
   
       const tempSpan = document.createElement('span');
@@ -483,7 +483,7 @@ export class OverlayManager {
         visibility: hidden;
         position: absolute;
         white-space: pre-wrap;
-        padding: 12px 20px;
+        padding: 12px 3px;
       `;
       tempSpan.innerHTML = message.innerHTML;
   
